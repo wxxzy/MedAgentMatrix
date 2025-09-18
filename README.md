@@ -1,4 +1,4 @@
-# 智药云数 (IntelliPharma-MDM)
+# 智药云数 (MedAgentMatrix)
 
 ## 项目简介
 
