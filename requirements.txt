@@ -1,0 +1,13 @@
+langgraph
+langchain
+fastapi
+uvicorn
+chromadb
+google-generativeai
+langchain-deepseek
+langchain_google_genai
+python-dotenv
+python-socketio
+pandas
+openpyxl
+tqdm

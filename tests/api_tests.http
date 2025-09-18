@@ -1,0 +1,13 @@
+###
+# @name Process Product
+POST http://localhost:8000/api/process
+Content-Type: application/json
+
+{
+    "raw_text": "芬必得 布洛芬缓释胶囊 0.3g*20粒/盒 国药准字H20010142"
+}
+
+###
+# @name Get Task Status
+GET http://localhost:8000/api/status/{{task_id}}
+Content-Type: application/json
