@@ -103,6 +103,9 @@ DEEPSEEK_API_KEY=your_deepseek_api_key
 
 # 数据库配置 (可选，默认使用 SQLite test.db)
 # DATABASE_URL=sqlite:///./test.db
+
+# Sentry DSN (用于错误追踪)
+# SENTRY_DSN=your_sentry_dsn
 ```
 
 ### 启动服务

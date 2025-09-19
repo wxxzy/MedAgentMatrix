@@ -1,9 +1,14 @@
+import time
 from langchain_core.prompts import ChatPromptTemplate
 import os
 from dotenv import load_dotenv
 from app.utils.llm_utils import get_llm_instance # 导入统一的LLM获取函数
+from app.utils.logging_config import get_logger, TASK_PROCESSED, TASK_DURATION
 
 load_dotenv()
+
+# 初始化日志记录器
+logger = get_logger(__name__)
 
 def get_classifier_chain():
     llm = get_llm_instance() # 使用统一函数获取LLM实例
@@ -15,14 +20,40 @@ def get_classifier_chain():
     return prompt | llm
 
 def classify_product(state):
-    print("---CLASSIFIER AGENT---")
+    start_time = time.time()
+    # 记录Classifier Agent开始执行
+    logger.info("---CLASSIFIER AGENT---")
     raw_text = state["raw_text"]
-    classifier_chain = get_classifier_chain()
-    product_type = classifier_chain.invoke({"raw_text": raw_text}).content.strip()
     
-    product_type = product_type.replace("。", "").replace("：", "").replace(" ", "")
-    if product_type not in ["药品", "器械", "药妆", "保健品", "中药饮片", "普通商品"]:
-        product_type = "普通商品"
+    try:
+        classifier_chain = get_classifier_chain()
+        product_type = classifier_chain.invoke({"raw_text": raw_text}).content.strip()
+        
+        product_type = product_type.replace("。", "").replace("：", "").replace(" ", "")
+        if product_type not in ["药品", "器械", "药妆", "保健品", "中药饮片", "普通商品"]:
+            product_type = "普通商品"
 
-    print(f"Classifier output: '{product_type}'")
-    return {"product_type": product_type, "current_node": "classifier"}
+        # 记录分类结果
+        logger.info(f"Classifier output: '{product_type}'")
+        
+        # 更新监控指标
+        TASK_PROCESSED.labels(status="success").inc()
+        TASK_DURATION.observe(time.time() - start_time)
+        
+        return {"product_type": product_type, "current_node": "classifier"}
+    except Exception as e:
+        # 记录错误日志
+        logger.error(
+            "Classifier agent error",
+            extra={
+                "error": str(e),
+                "raw_text": raw_text
+            }
+        )
+        
+        # 更新监控指标
+        TASK_PROCESSED.labels(status="error").inc()
+        TASK_DURATION.observe(time.time() - start_time)
+        
+        # 重新抛出异常
+        raise

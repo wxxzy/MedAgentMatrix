@@ -11,3 +11,6 @@ python-socketio
 pandas
 openpyxl
 tqdm
+structlog
+prometheus-client
+sentry-sdk[fastapi]

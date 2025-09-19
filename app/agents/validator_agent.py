@@ -1,3 +1,4 @@
+import time
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
@@ -6,8 +7,12 @@ import os
 from dotenv import load_dotenv
 import json
 from app.utils.llm_utils import get_llm_instance # 导入统一的LLM获取函数
+from app.utils.logging_config import get_logger, TASK_PROCESSED, TASK_DURATION
 
 load_dotenv()
+
+# 初始化日志记录器
+logger = get_logger(__name__)
 
 # 定义LLM输出的Pydantic模型，用于结构化验证结果
 class ValidationResult(BaseModel):
@@ -16,7 +21,9 @@ class ValidationResult(BaseModel):
     validated_data: Optional[Dict[str, Any]] = Field(description="如果验证通过，返回经过验证的数据")
 
 def validate_data(state: Dict[str, Any]) -> Dict[str, Any]:
-    print("---VALIDATOR AGENT (Simplified) ---")
+    start_time = time.time()
+    # 记录Validator Agent开始执行
+    logger.info("---VALIDATOR AGENT (Simplified) ---")
     extracted_data = state["extracted_data"]
     product_type = state["product_type"]
 
@@ -53,19 +60,49 @@ def validate_data(state: Dict[str, Any]) -> Dict[str, Any]:
         # 确保validation_output是字典，并安全访问键
         if isinstance(validation_output, dict):
             if validation_output.get("validation_status") == "PASSED":
-                print("Validation successful.")
+                # 记录验证成功日志
+                logger.info("Validation successful.")
+                
+                # 更新监控指标
+                TASK_PROCESSED.labels(status="success").inc()
+                TASK_DURATION.observe(time.time() - start_time)
+                
                 return {"validated_data": validation_output.get("validated_data") or extracted_data, "review_reason": None, "current_node": "validator"}
             else:
-                print(f"Validation failed: {validation_output.get('review_reason')}")
+                # 记录验证失败日志
+                logger.warning(f"Validation failed: {validation_output.get('review_reason')}")
+                
+                # 更新监控指标
+                TASK_PROCESSED.labels(status="success").inc() # 验证逻辑正常工作，但结果是失败
+                TASK_DURATION.observe(time.time() - start_time)
+                
                 return {"validated_data": extracted_data, "review_reason": validation_output.get('review_reason'), "current_node": "validator"}
         else: # 如果parser成功返回了Pydantic对象
             if validation_output.validation_status == "PASSED":
-                print("Validation successful.")
+                # 记录验证成功日志
+                logger.info("Validation successful.")
+                
+                # 更新监控指标
+                TASK_PROCESSED.labels(status="success").inc()
+                TASK_DURATION.observe(time.time() - start_time)
+                
                 return {"validated_data": validation_output.validated_data or extracted_data, "review_reason": None, "current_node": "validator"}
             else:
-                print(f"Validation failed: {validation_output.review_reason}")
+                # 记录验证失败日志
+                logger.warning(f"Validation failed: {validation_output.review_reason}")
+                
+                # 更新监控指标
+                TASK_PROCESSED.labels(status="success").inc() # 验证逻辑正常工作，但结果是失败
+                TASK_DURATION.observe(time.time() - start_time)
+                
                 return {"validated_data": extracted_data, "review_reason": validation_output.review_reason, "current_node": "validator"}
 
     except Exception as e:
-        print(f"Validator Agent执行失败: {e}")
+        # 记录验证Agent执行失败日志
+        logger.error(f"Validator Agent执行失败: {e}")
+        
+        # 更新监控指标
+        TASK_PROCESSED.labels(status="error").inc()
+        TASK_DURATION.observe(time.time() - start_time)
+        
         return {"validated_data": extracted_data, "review_reason": f"Validator Agent执行异常: {e}", "current_node": "validator"}
