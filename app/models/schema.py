@@ -1,8 +1,8 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, func, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 Base = declarative_base()
@@ -31,10 +31,14 @@ class ReviewQueue(Base):
     review_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     raw_info = Column(Text, nullable=False) # 原始输入信息
     product_type = Column(String(50)) # 商品类型
-    extracted_data = Column(Text) # 提取出的结构化数据 (JSON string)
-    validated_data = Column(Text) # 验证后的结构化数据 (JSON string)
-    review_reason = Column(String(500), nullable=False) # 需要人工审核的原因
+    extracted_data = Column(JSON) # 提取出的结构化数据 (JSON)
+    validated_data = Column(JSON) # 验证后的结构化数据 (JSON)
+    review_reason = Column(JSON) # 需要人工审核的结构化原因
+    agent_history = Column(JSON) # Agent处理历史
+    match_candidates = Column(JSON) # 匹配候选产品列表
+    fusion_conflicts = Column(JSON) # 融合冲突详情
     status = Column(String(50), default="PENDING") # PENDING, APPROVED, REJECTED
+    priority_score = Column(Integer, default=0) # 审核优先级评分
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -60,6 +64,47 @@ class ProductCreate(BaseModel):
 
 class ProductResponse(ProductCreate):
     spu_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Pydantic models for Review Queue
+class ReviewReason(BaseModel):
+    type: str # 错误类型: VALIDATION_FAILED, MATCH_FAILED, FUSION_CONFLICT, etc.
+    message: str # 详细错误信息
+    field: Optional[str] = None # 相关字段
+    expected_format: Optional[str] = None # 期望格式（如果适用）
+
+class AgentHistoryItem(BaseModel):
+    agent_name: str
+    output: Dict[str, Any]
+    timestamp: datetime
+
+class MatchCandidate(BaseModel):
+    spu_id: int
+    score: float
+    product_info: Dict[str, str]
+
+class FusionConflict(BaseModel):
+    field: str
+    existing_value: str
+    new_value: str
+    reason: str
+
+class ReviewQueueItem(BaseModel):
+    review_id: int
+    raw_info: str
+    product_type: Optional[str]
+    extracted_data: Optional[Dict[str, Any]]
+    validated_data: Optional[Dict[str, Any]]
+    review_reason: List[ReviewReason]
+    agent_history: List[AgentHistoryItem]
+    match_candidates: List[MatchCandidate]
+    fusion_conflicts: List[FusionConflict]
+    status: str
+    priority_score: int
     created_at: datetime
     updated_at: datetime
 

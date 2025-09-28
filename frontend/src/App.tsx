@@ -1,6 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'reactflow/dist/style.css';
-import { Container, Row, Col, Card, Form, Button, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, ListGroup, Nav, Navbar } from 'react-bootstrap';
 import { useCallback, useState, useEffect } from 'react';
 import ReactFlow, {
     useNodesState,
@@ -8,6 +8,14 @@ import ReactFlow, {
 } from 'reactflow';
 import type { Edge, Node} from 'reactflow';
 import io from 'socket.io-client';
+import ReviewQueuePage from './ReviewQueuePage';
+import ReviewDetailPage from './ReviewDetailPage';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link
+} from "react-router-dom";
 
 // 从环境变量中获取后端API的Base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'; // 默认值
@@ -164,77 +172,93 @@ function App() {
     };
 
     return (
-        <Container fluid style={{ height: '100vh' }} className="p-3">
-            <Row style={{ height: '100%' }}>
-                <Col md={3} className="d-flex flex-column">
-                    <Card className="mb-3">
-                        <Card.Body>
-                            <Card.Title>任务状态</Card.Title>
-                            <p><strong>任务ID:</strong> {currentTaskId || '无'}</p>
-                            <p><strong>状态:</strong> {currentTaskStatus}</p>
-                        </Card.Body>
-                    </Card>
-                    <Card className="mb-3 flex-grow-1">
-                        <Card.Body>
-                            <Card.Title>提交新商品</Card.Title>
-                            <Form onSubmit={handleSubmit}>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>商品信息 (原始文本)</Form.Label>
-                                    <Form.Control as="textarea" rows={15} placeholder='粘贴商品描述...' value={productInfo} onChange={(e) => setProductInfo(e.target.value)} />
-                                </Form.Group>
-                                <Button variant="primary" type="submit">提交</Button>
-                            </Form>
-                        </Card.Body>
-                    </Card>
-                </Col>
+        <Router>
+            <Container fluid className="p-0" style={{ height: '100vh' }}>
+                <Navbar bg="dark" variant="dark" expand="lg">
+                    <Navbar.Brand as={Link} to="/" className="px-3">MedAgentMatrix</Navbar.Brand>
+                    <Nav className="me-auto">
+                        <Nav.Link as={Link} to="/">任务面板</Nav.Link>
+                        <Nav.Link as={Link} to="/review">人工审核</Nav.Link>
+                    </Nav>
+                </Navbar>
+                
+                <Routes>
+                    <Route path="/" element={
+                        <Row style={{ height: 'calc(100vh - 56px)' }}>
+                            <Col md={3} className="d-flex flex-column p-3">
+                                <Card className="mb-3">
+                                    <Card.Body>
+                                        <Card.Title>任务状态</Card.Title>
+                                        <p><strong>任务ID:</strong> {currentTaskId || '无'}</p>
+                                        <p><strong>状态:</strong> {currentTaskStatus}</p>
+                                    </Card.Body>
+                                </Card>
+                                <Card className="mb-3 flex-grow-1">
+                                    <Card.Body>
+                                        <Card.Title>提交新商品</Card.Title>
+                                        <Form onSubmit={handleSubmit}>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label>商品信息 (原始文本)</Form.Label>
+                                                <Form.Control as="textarea" rows={15} placeholder='粘贴商品描述...' value={productInfo} onChange={(e) => setProductInfo(e.target.value)} />
+                                            </Form.Group>
+                                            <Button variant="primary" type="submit">提交</Button>
+                                        </Form>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
 
-                <Col md={6} className="border rounded h-100">
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onNodeClick={onNodeClick}
-                        fitView
-                    />
-                </Col>
+                            <Col md={6} className="border rounded h-100 p-3">
+                                <ReactFlow
+                                    nodes={nodes}
+                                    edges={edges}
+                                    onNodesChange={onNodesChange}
+                                    onEdgesChange={onEdgesChange}
+                                    onNodeClick={onNodeClick}
+                                    fitView
+                                />
+                            </Col>
 
-                <Col md={3} className="d-flex flex-column">
-                    {reviewItem && (
-                        <Card className="mb-3 border-warning">
-                            <Card.Body>
-                                <Card.Title className="text-warning">人工审核 (ID: {reviewItem.review_id})</Card.Title>
-                                <p><strong>原因:</strong> {reviewItem.review_reason}</p>
-                                <Button variant="success" className="me-2" onClick={() => handleReviewSubmit(true)}>批准</Button>
-                                <Button variant="danger" onClick={() => handleReviewSubmit(false)}>拒绝</Button>
-                            </Card.Body>
-                        </Card>
-                    )}
-                    {selectedNodeState && (
-                        <Card className="mb-3">
-                            <Card.Body>
-                                <Card.Title>节点详情: {selectedNodeState.node}</Card.Title>
-                                <pre style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                    {JSON.stringify(selectedNodeState.state, null, 2)}
-                                </pre>
-                            </Card.Body>
-                        </Card>
-                    )}
-                    <Card className="flex-grow-1">
-                        <Card.Body>
-                            <Card.Title>处理历史</Card.Title>
-                            <ListGroup style={{ maxHeight: '100%', overflowY: 'auto' }}>
-                                {taskHistory.map((h, i) => (
-                                    <ListGroup.Item key={i} action onClick={() => setSelectedNodeState(h)}>
-                                        步骤 {i + 1}: <strong>{h.node}</strong>
-                                    </ListGroup.Item>
-                                ))}
-                            </ListGroup>
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-        </Container>
+                            <Col md={3} className="d-flex flex-column p-3">
+                                {reviewItem && (
+                                    <Card className="mb-3 border-warning">
+                                        <Card.Body>
+                                            <Card.Title className="text-warning">人工审核 (ID: {reviewItem.review_id})</Card.Title>
+                                            <p><strong>原因:</strong> {reviewItem.review_reason}</p>
+                                            <Button variant="success" className="me-2" onClick={() => handleReviewSubmit(true)}>批准</Button>
+                                            <Button variant="danger" onClick={() => handleReviewSubmit(false)}>拒绝</Button>
+                                        </Card.Body>
+                                    </Card>
+                                )}
+                                {selectedNodeState && (
+                                    <Card className="mb-3">
+                                        <Card.Body>
+                                            <Card.Title>节点详情: {selectedNodeState.node}</Card.Title>
+                                            <pre style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                                {JSON.stringify(selectedNodeState.state, null, 2)}
+                                            </pre>
+                                        </Card.Body>
+                                    </Card>
+                                )}
+                                <Card className="flex-grow-1">
+                                    <Card.Body>
+                                        <Card.Title>处理历史</Card.Title>
+                                        <ListGroup style={{ maxHeight: '100%', overflowY: 'auto' }}>
+                                            {taskHistory.map((h, i) => (
+                                                <ListGroup.Item key={i} action onClick={() => setSelectedNodeState(h)}>
+                                                    步骤 {i + 1}: <strong>{h.node}</strong>
+                                                </ListGroup.Item>
+                                            ))}
+                                        </ListGroup>
+                                    </Card.Body>
+                                </Card>
+                            </Col>
+                        </Row>
+                    } />
+                    <Route path="/review" element={<ReviewQueuePage />} />
+                    <Route path="/review/:id" element={<ReviewDetailPage />} />
+                </Routes>
+            </Container>
+        </Router>
     );
 }
 

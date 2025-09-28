@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>示例页面 - 演示绝对路径引用</title>
+    <!-- 使用绝对路径引用 Bootstrap CSS -->
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">示例页面</h1>
+        <p class="lead">这个页面演示如何使用绝对路径引用静态资源</p>
+        <button id="testBtn" class="btn btn-primary">点击测试</button>
+    </div>
+
+    <!-- 使用绝对路径引用 jQuery 和 Bootstrap JS -->
+    <script src="/jquery/jquery-1.9.1.min.js"></script>
+    <script src="/bootstrap/js/bootstrap.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('#testBtn').click(function() {
+                alert('jQuery 工作正常！');
+            });
+        });
+    </script>
+</body>
+</html>

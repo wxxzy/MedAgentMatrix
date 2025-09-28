@@ -2,6 +2,7 @@ import time
 import traceback
 from typing import Dict, Any
 import copy
+from datetime import datetime
 from app.agents.graph import agent_executor, AgentState
 from app.agents.save_product_agent import save_product
 from app.socket import sio
@@ -15,7 +16,7 @@ async def process_product_task(raw_text: str, task_id: str, tasks: Dict, sid: st
     # 记录开始处理任务的日志
     logger.info(f"[ProductService] Starting process for task_id: {task_id}")
     
-    initial_state = {"raw_text": raw_text, "current_node": "__start__"}
+    initial_state = {"raw_text": raw_text, "current_node": "__start__", "agent_history": []}
     tasks[task_id]["status"] = "PROCESSING"
     tasks[task_id]["history"] = []
     current_state = copy.deepcopy(initial_state)
@@ -25,6 +26,14 @@ async def process_product_task(raw_text: str, task_id: str, tasks: Dict, sid: st
             node_output = list(step.values())[0]
             current_state.update(node_output)
             node_name = current_state.get("current_node", "unknown_node")
+            
+            # 记录Agent处理历史
+            agent_history_item = {
+                "agent_name": node_name,
+                "output": node_output,
+                "timestamp": datetime.now()
+            }
+            current_state["agent_history"].append(agent_history_item)
 
             # 记录Agent执行步骤的日志
             logger.info(f"[ProductService] Agent yielded step: {node_name} for task_id {task_id}")
